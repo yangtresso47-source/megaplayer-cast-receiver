@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Mega Player</title>
+<script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
+<style>
+  html, body { margin: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: "Segoe UI", Roboto, Arial, sans-serif; }
+  /* Lecteur de Google Cast, habillé Mega Player : écran d'attente, logo, couleur de la barre. */
+  cast-media-player {
+    --background-color: #000;
+    --splash-image: url("logo.png");
+    --splash-size: contain;
+    --logo-image: url("icon.png");
+    --logo-size: 96px;
+    --progress-color: #7A2CFF;
+    --buffering-color: #7A2CFF;
+    --font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  #attente { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; background: #000; }
+  #attente img { width: 60vw; max-width: 1100px; }
+  #attente p { color: #b3b3b3; font-size: 2.2vw; margin: 1.5vw 0 0; }
+</style>
+</head>
+<body>
+<cast-media-player></cast-media-player>
+<div id="attente"><img src="logo.png" alt="Mega Player"><p id="message">Prêt à diffuser</p></div>
+<script src="receiver.js"></script>
+</body>
+</html>
