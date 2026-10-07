@@ -29,6 +29,7 @@ function remplirFiche(libelleEtat) {
   // Chaîne : visuel du programme en fond + vignette ; film : affiche au centre sur fond sombre.
   if (i.fond) { fond.src = i.fond; fond.classList.remove("fondAffiche"); fond.style.display = "block"; vig.src = i.fond; vig.classList.add("visible"); }
   else if (i.image) { fond.src = i.image; fond.classList.add("fondAffiche"); fond.style.display = "block"; vig.classList.remove("visible"); vig.removeAttribute("src"); }
+  else if (i.logoChaine) { fond.src = i.logoChaine; fond.classList.add("fondAffiche"); fond.style.display = "block"; vig.src = i.logoChaine; vig.classList.add("visible"); }
   else { fond.style.display = "none"; fond.removeAttribute("src"); vig.classList.remove("visible"); vig.removeAttribute("src"); }
   if (i.image && !i.fond) { aff.src = i.image; aff.classList.add("visible"); } else { aff.classList.remove("visible"); aff.removeAttribute("src"); }
   if (i.logoChaine) { logoCh.src = i.logoChaine; logoCh.classList.add("visible"); } else { logoCh.classList.remove("visible"); logoCh.removeAttribute("src"); }
