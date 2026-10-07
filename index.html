@@ -8,6 +8,7 @@
   html, body { margin: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: "Segoe UI", Roboto, Arial, sans-serif; color: #fff; }
   /* Lecteur de Google Cast : vidéo plein écran, son habillage par défaut masqué (le nôtre est dessous). */
   cast-media-player {
+    transform-origin: center center;
     --background-color: #000;
     --splash-image: url("logo.png");
     --splash-size: contain;
@@ -84,6 +85,6 @@
 </div>
 <div id="bandeau"><img id="bandeauLogo" src="icon.png" alt=""><div><div class="t" id="bandeauTitre"></div><div class="s" id="bandeauSous"></div></div></div>
 <div id="soustitres"></div>
-<script src="receiver.js?v=3"></script>
+<script src="receiver.js?v=4"></script>
 </body>
 </html>

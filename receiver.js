@@ -24,7 +24,7 @@ function remplirFiche(libelleEtat) {
   const i = etat.info || {};
   $("ficheEtat").textContent = libelleEtat;
   $("ficheTitre").textContent = i.titre || "";
-  $("ficheSous").textContent = i.sousTitre || "";
+  $("ficheSous").textContent = (i.sousTitre || "") + (i.suivant ? "   ·   À suivre : " + i.suivant : "");
   const fond = $("ficheFond"), aff = $("ficheAffiche"), vig = $("ficheVignette"), logoCh = $("ficheLogoChaine");
   // Chaîne : visuel du programme en fond + vignette ; film : affiche au centre sur fond sombre.
   if (i.fond) { fond.src = i.fond; fond.classList.remove("fondAffiche"); fond.style.display = "block"; vig.src = i.fond; vig.classList.add("visible"); }
@@ -63,7 +63,7 @@ function montrerBandeau() {
   const i = etat.info || {};
   if (!i.titre) return;
   $("bandeauTitre").textContent = i.titre;
-  $("bandeauSous").textContent = i.sousTitre || "";
+  $("bandeauSous").textContent = (i.sousTitre || "") + (i.suivant ? "   ·   À suivre : " + i.suivant : "");
   $("bandeauLogo").src = i.logoChaine || "icon.png";
   $("bandeau").classList.add("visible");
   clearTimeout(etat.bandeauTimer);
@@ -137,6 +137,7 @@ contexte.addCustomMessageListener(CANAL, (event) => {
         titre: m.titre || "", sousTitre: m.sousTitre || "", synopsis: m.synopsis || "", image: m.image || null, direct: !!m.direct,
         chaine: m.chaine || "", logoChaine: m.logoChaine || null, fond: m.fond || null,
         debutMs: +m.debutMs || 0, finMs: +m.finMs || 0, departMs: +m.departMs || 0, dureeMs: +m.dureeMs || 0,
+        suivant: m.suivant || "",
       };
       if ($("fiche").classList.contains("visible")) remplirFiche($("ficheEtat").textContent);
       else if (etat.enLecture && etat.info.chaine) montrerBandeau();
@@ -144,6 +145,12 @@ contexte.addCustomMessageListener(CANAL, (event) => {
     case "SOUS_TITRES":
       definirSousTitres(m.url, m.decalageMs);
       break;
+    case "FORMAT": {
+      // Format d'image choisi sur le téléphone : la vidéo du lecteur est étirée / zoomée par CSS.
+      const t = { normal: "none", zoom: "scale(1.18)", etire: "scaleX(1.333)", quatre_tiers: "scaleX(0.75)", cinema: "scale(1.33)" }[m.mode] || "none";
+      document.querySelector("cast-media-player").style.transform = t;
+      break;
+    }
     case "ATTENTE":
       masquerFiche(); afficherAttente(m.texte || "Préparation…");
       break;
