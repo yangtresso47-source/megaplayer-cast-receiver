@@ -1,7 +1,7 @@
 // Récepteur Chromecast de Mega Player (page affichée sur la télé pendant une diffusion).
-// Le flux HLS est fabriqué et servi par le téléphone. Ici : lecture, habillage (fiche au chargement / en pause,
-// bandeau au changement de chaîne), sous-titres WebVTT relus pendant la conversion, et le canal
-// « urn:x-cast:com.megaplayer.cast » : le téléphone demande ce que la télé sait lire et envoie les infos.
+// Le flux HLS est fabriqué et servi par le téléphone. Ici : lecture, habillage façon OQEE (fiche au chargement / en
+// pause avec la barre du programme, bandeau au changement de chaîne), sous-titres WebVTT relus pendant la conversion,
+// et le canal « urn:x-cast:com.megaplayer.cast » : le téléphone demande ce que la télé sait lire et envoie les infos.
 const CANAL = "urn:x-cast:com.megaplayer.cast";
 const contexte = cast.framework.CastReceiverContext.getInstance();
 const lecteur = contexte.getPlayerManager();
@@ -14,15 +14,47 @@ const etat = { info: null, enLecture: false, cues: [], vtt: null, decalageMs: 0,
 function afficherAttente(texte) { $("message").textContent = texte; $("attente").style.display = "flex"; }
 function masquerAttente() { $("attente").style.display = "none"; }
 
+function heure(ms) { const d = new Date(ms); return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2); }
+function duree(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  return (h > 0 ? h + ":" + ("0" + m).slice(-2) : m) + ":" + ("0" + sec).slice(-2);
+}
+
 function remplirFiche(libelleEtat) {
   const i = etat.info || {};
   $("ficheEtat").textContent = libelleEtat;
   $("ficheTitre").textContent = i.titre || "";
   $("ficheSous").textContent = i.sousTitre || "";
-  $("ficheSynopsis").textContent = i.synopsis || "";
-  const aff = $("ficheAffiche");
-  if (i.image) { aff.src = i.image; aff.classList.add("visible"); } else { aff.classList.remove("visible"); aff.removeAttribute("src"); }
+  const fond = $("ficheFond"), aff = $("ficheAffiche"), vig = $("ficheVignette"), logoCh = $("ficheLogoChaine");
+  // Chaîne : visuel du programme en fond + vignette ; film : affiche au centre sur fond sombre.
+  if (i.fond) { fond.src = i.fond; fond.classList.remove("fondAffiche"); fond.style.display = "block"; vig.src = i.fond; vig.classList.add("visible"); }
+  else if (i.image) { fond.src = i.image; fond.classList.add("fondAffiche"); fond.style.display = "block"; vig.classList.remove("visible"); vig.removeAttribute("src"); }
+  else { fond.style.display = "none"; fond.removeAttribute("src"); vig.classList.remove("visible"); vig.removeAttribute("src"); }
+  if (i.image && !i.fond) { aff.src = i.image; aff.classList.add("visible"); } else { aff.classList.remove("visible"); aff.removeAttribute("src"); }
+  if (i.logoChaine) { logoCh.src = i.logoChaine; logoCh.classList.add("visible"); } else { logoCh.classList.remove("visible"); logoCh.removeAttribute("src"); }
+  majBarre();
 }
+// Barre du programme : chaîne = horaires du programme (direct = maintenant, différé = début + position) ; film = position / durée.
+function majBarre() {
+  const i = etat.info || {};
+  const pos = lecteur.getCurrentTimeSec() * 1000;
+  let frac = 0, gauche = "", droite = "", direct = false;
+  if (i.debutMs && i.finMs && i.finMs > i.debutMs) {
+    const courant = i.direct ? Date.now() : i.debutMs + (i.departMs || 0) + pos;
+    frac = (courant - i.debutMs) / (i.finMs - i.debutMs);
+    gauche = heure(i.debutMs); droite = heure(i.finMs); direct = !!i.direct;
+  } else if (!i.direct && i.dureeMs > 0) {
+    const courant = (i.departMs || 0) + pos;
+    frac = courant / i.dureeMs;
+    gauche = duree(courant); droite = duree(i.dureeMs);
+  }
+  frac = Math.max(0, Math.min(1, frac || 0));
+  $("ficheAvancement").style.width = (frac * 100) + "%";
+  $("ficheCurseur").style.left = (frac * 100) + "%";
+  $("ficheDebut").textContent = gauche; $("ficheFin").textContent = droite;
+  $("ficheDirect").classList.toggle("visible", direct);
+}
+setInterval(() => { if ($("fiche").classList.contains("visible")) majBarre(); }, 1000);
 function montrerFiche(libelleEtat) { remplirFiche(libelleEtat); $("fiche").classList.add("visible"); }
 function masquerFiche() { $("fiche").classList.remove("visible"); }
 
@@ -31,6 +63,7 @@ function montrerBandeau() {
   if (!i.titre) return;
   $("bandeauTitre").textContent = i.titre;
   $("bandeauSous").textContent = i.sousTitre || "";
+  $("bandeauLogo").src = i.logoChaine || "icon.png";
   $("bandeau").classList.add("visible");
   clearTimeout(etat.bandeauTimer);
   etat.bandeauTimer = setTimeout(() => $("bandeau").classList.remove("visible"), 4000);
@@ -99,9 +132,13 @@ contexte.addCustomMessageListener(CANAL, (event) => {
       contexte.sendCustomMessage(CANAL, event.senderId, capacites());
       break;
     case "INFO":
-      etat.info = { titre: m.titre || "", sousTitre: m.sousTitre || "", synopsis: m.synopsis || "", image: m.image || null, direct: !!m.direct };
+      etat.info = {
+        titre: m.titre || "", sousTitre: m.sousTitre || "", synopsis: m.synopsis || "", image: m.image || null, direct: !!m.direct,
+        chaine: m.chaine || "", logoChaine: m.logoChaine || null, fond: m.fond || null,
+        debutMs: +m.debutMs || 0, finMs: +m.finMs || 0, departMs: +m.departMs || 0, dureeMs: +m.dureeMs || 0,
+      };
       if ($("fiche").classList.contains("visible")) remplirFiche($("ficheEtat").textContent);
-      else if (etat.enLecture && etat.info.direct) montrerBandeau();
+      else if (etat.enLecture && etat.info.chaine) montrerBandeau();
       break;
     case "SOUS_TITRES":
       definirSousTitres(m.url, m.decalageMs);
@@ -116,7 +153,7 @@ contexte.addCustomMessageListener(CANAL, (event) => {
 const E = cast.framework.events.EventType;
 lecteur.addEventListener(E.REQUEST_LOAD, () => { masquerAttente(); montrerFiche("Chargement"); });
 lecteur.addEventListener(E.PLAYER_LOAD_COMPLETE, () => { masquerAttente(); });
-lecteur.addEventListener(E.PLAYING, () => { etat.enLecture = true; masquerAttente(); masquerFiche(); if (etat.info && etat.info.direct) montrerBandeau(); });
+lecteur.addEventListener(E.PLAYING, () => { etat.enLecture = true; masquerAttente(); masquerFiche(); if (etat.info && etat.info.chaine) montrerBandeau(); });
 lecteur.addEventListener(E.PAUSE, () => { etat.enLecture = false; montrerFiche("Pause"); });
 lecteur.addEventListener(E.BUFFERING, (e) => { if (e.isBuffering && !etat.enLecture) montrerFiche("Chargement"); });
 lecteur.addEventListener(E.MEDIA_FINISHED, () => { etat.enLecture = false; masquerFiche(); definirSousTitres(null, 0); afficherAttente("Prêt à diffuser"); });
